@@ -13,7 +13,7 @@
         <div class="text-medium-emphasis">{{ item.category }}</div>
         <div class="font-weight-bold">{{ item.price.toLocaleString() }}원</div>
       </div>
-      <v-btn icon="mdi-delete" variant="text" color="error" @click.stop="remove(item.id)" />
+      <v-btn icon="mdi-delete" variant="text" color="error" @click.stop="askDelete(item)" />
     </div>
   </v-card>
 </v-container>
@@ -24,9 +24,14 @@
 <v-dialog v-model="dialog" max-width="500">
   <v-card :title="editingId === null ? '서비스 등록' : '서비스 수정'">
     <v-card-text>
-      <v-text-field v-model="form.name" label="서비스명" />
-      <v-select v-model="form.category" :items="categories" label="카테고리" />
-      <v-text-field v-model.number="form.price" label="가격" type="number" suffix="원" />
+      <v-form ref="formRef">
+        <v-text-field v-model="form.name" label="서비스명" :rules="[required]" />
+        <v-select v-model="form.category" :items="categories" label="카테고리" :rules="[required]" />
+        <v-text-field
+          v-model.number="form.price" label="가격" type="number" suffix="원"
+          :rules="[required, positive]"
+        />
+      </v-form>
     </v-card-text>
     <v-card-actions>
       <v-spacer />
@@ -35,10 +40,23 @@
     </v-card-actions>
   </v-card>
 </v-dialog>
+
+<!-- 삭제 확인 팝업 -->
+<v-dialog v-model="deleteDialog" max-width="400">
+  <v-card title="삭제 확인">
+    <v-card-text>'{{ deleteTarget?.name }}' 항목을 삭제할까요?</v-card-text>
+    <v-card-actions>
+      <v-spacer />
+      <v-btn @click="deleteDialog = false">취소</v-btn>
+      <v-btn color="error" variant="flat" @click="confirmDelete">삭제</v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
+import type { VForm } from 'vuetify/components'
 
 interface ServiceItem {
   id: number
@@ -61,14 +79,32 @@ const filtered = computed(() =>
   items.value.filter(i => i.name.includes(keyword.value))
 )
 
-// 삭제
-function remove(id: number) {
-  items.value = items.value.filter(i => i.id !== id)
+// 검증 규칙
+const required = (v: unknown) =>
+  (v !== null && v !== undefined && String(v).trim() !== '') || '필수 입력입니다'
+const positive = (v: number) => v > 0 || '0보다 커야 합니다'
+
+// 삭제 (확인 팝업)
+const deleteDialog = ref(false)
+const deleteTarget = ref<ServiceItem | null>(null)
+
+function askDelete(item: ServiceItem) {
+  deleteTarget.value = item
+  deleteDialog.value = true
+}
+
+function confirmDelete() {
+  if (deleteTarget.value) {
+    const id = deleteTarget.value.id
+    items.value = items.value.filter(i => i.id !== id)
+  }
+  deleteDialog.value = false
 }
 
 // 등록 / 수정 공용
 const dialog = ref(false)
-const editingId = ref<number | null>(null)   // null = 등록, 숫자 = 수정 중인 id
+const formRef = ref<InstanceType<typeof VForm> | null>(null)
+const editingId = ref<number | null>(null)
 const form = ref({ name: '', category: '', price: 0 })
 
 function openCreate() {
@@ -83,12 +119,13 @@ function openEdit(item: ServiceItem) {
   dialog.value = true
 }
 
-function save() {
+async function save() {
+  const result = await formRef.value?.validate()
+  if (!result?.valid) return
+
   if (editingId.value === null) {
-    // 등록
     items.value.push({ id: nextId++, ...form.value })
   } else {
-    // 수정
     const idx = items.value.findIndex(i => i.id === editingId.value)
     items.value[idx] = { id: editingId.value, ...form.value }
   }
