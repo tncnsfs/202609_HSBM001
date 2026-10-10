@@ -41,7 +41,14 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jdbc</artifactId>
-		</dependency>	
+		</dependency>
+		<!-- MyBatis: 자바 메서드와 SQL(XML)을 연결해 주는 도구 -->
+		<!-- Spring이 버전을 관리하지 않아서 version을 직접 적음. 4.x = Spring Boot 4용 -->
+		<dependency>
+			<groupId>org.mybatis.spring.boot</groupId>
+			<artifactId>mybatis-spring-boot-starter</artifactId>
+			<version>4.0.0</version>
+		</dependency>		
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>

@@ -78,3 +78,15 @@
 - ss -ltnp | grep 8080 : 포트를 누가 쓰는지 확인
 
 
+## 1-4. MyBatis로 DB 연동 (XML 매퍼)
+- pom.xml: mybatis-spring-boot-starter 추가
+- application.properties
+  - mybatis.mapper-locations=classpath:mapper/*.xml  → XML 위치 지정
+  - mybatis.configuration.map-underscore-to-camel-case=true → created_at ↔ createdAt 자동 변환
+- ServiceItemMapper.java: @Mapper 인터페이스 (메서드 이름 = XML의 id)
+- resources/mapper/ServiceItemMapper.xml: 실제 SQL 작성
+  - INSERT ... RETURNING id 로 새 id 받기
+- ItemController: 메모리 저장소 제거 → mapper 사용 (생성자 주입)
+- 확인: 로그에 HikariPool 시작 + curl 결과가 DB 데이터와 같음
+- 이제 백엔드 재시작해도 데이터가 남음 (DB에 저장되니까)
+

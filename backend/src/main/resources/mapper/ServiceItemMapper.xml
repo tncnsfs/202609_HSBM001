@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace = 연결할 Mapper 인터페이스의 전체 이름 (패키지 + 이름) -->
+<mapper namespace="com.hsbm.backend.ServiceItemMapper">
+
+    <!-- 전체 목록. id = 인터페이스 메서드 이름 -->
+    <!-- resultType = 결과 한 줄을 담을 자바 타입. 컬럼 순서는 ServiceItem(id, name, category, price)와 같게 -->
+    <select id="findAll" resultType="com.hsbm.backend.ServiceItem">
+        SELECT id, name, category, price
+          FROM service_item
+         ORDER BY id
+    </select>
+
+    <!-- 1개 조회. #{id} = 메서드의 @Param("id") 값이 안전하게 들어감 (SQL 인젝션 방지) -->
+    <select id="findById" resultType="com.hsbm.backend.ServiceItem">
+        SELECT id, name, category, price
+          FROM service_item
+         WHERE id = #{id}
+    </select>
+
+    <!-- 등록. RETURNING id = PostgreSQL이 새로 매긴 id를 바로 돌려줌 -->
+    <!-- 값을 돌려받아야 해서 insert 태그 대신 select 태그 사용. flushCache = 캐시 비우기 -->
+    <select id="insert" resultType="long" flushCache="true">
+        INSERT INTO service_item (name, category, price)
+        VALUES (#{name}, #{category}, #{price})
+        RETURNING id
+    </select>
+
+    <!-- 수정. #{name} 등은 넘겨받은 ServiceItem의 필드 값 -->
+    <update id="update">
+        UPDATE service_item
+           SET name = #{name},
+               category = #{category},
+               price = #{price}
+         WHERE id = #{id}
+    </update>
+
+    <!-- 삭제 -->
+    <delete id="deleteById">
+        DELETE FROM service_item
+         WHERE id = #{id}
+    </delete>
+
+</mapper>
