@@ -57,13 +57,10 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
+// api/items.ts에서 만든 함수 4개와 ServiceItem 타입을 가져옴
+// ../ = 한 폴더 위로 (pages → src), 그다음 api/items
+import { fetchItems, createItem, updateItem, deleteItem, type ServiceItem } from '../api/items'
 
-interface ServiceItem {
-  id: number
-  name: string
-  category: string
-  price: number
-}
 
 const keyword = ref('')
 const categories = ['가전 청소', '청소', '이사', '수리']
@@ -75,10 +72,8 @@ const items = ref<ServiceItem[]>([])
 // 백엔드에서 목록을 가져오는 함수
 // async = 안에서 서버 응답을 기다리는(await) 코드가 있다는 표시
 async function load () {
-  // GET /api/items 요청 → Vite 프록시가 8080 백엔드로 전달
-  const res = await fetch('/api/items')
-  // 응답 JSON 글자를 배열로 바꿔서 상자에 넣음 → 화면 자동 갱신
-  items.value = await res.json()
+  // items.ts의 fetchItems()가 GET 요청 + JSON 변환까지 해 줌
+  items.value = await fetchItems()
 }
 
 // 화면이 처음 뜰 때 load()를 한 번 실행
@@ -106,9 +101,8 @@ function askDelete(item: ServiceItem) {
 // async = 서버 응답을 기다려야 해서 붙임
 async function confirmDelete () {
   if (deleteTarget.value) {
-    // DELETE /api/items/{id} 요청 → 백엔드 delete() → store.remove(id)
-    // 백틱(`)과 ${ } = 문자열 안에 변수 값을 끼워 넣는 문법
-    await fetch(`/api/items/${deleteTarget.value.id}`, { method: 'DELETE' })
+    // items.ts의 deleteItem()이 DELETE 요청을 보냄
+    await deleteItem(deleteTarget.value.id)
     // 백엔드에서 최신 목록을 다시 받아와 화면 갱신
     await load()
   }
@@ -141,19 +135,13 @@ async function save () {
   // 검사 결과가 없거나 통과 못 하면 저장하지 않고 멈춤
   if (!result?.valid) return
 
-  // editingId가 null이면 새 항목 등록, 숫자면 그 항목 수정
-  const isNew = editingId.value === null
-
-  // 등록은 POST /api/items, 수정은 PUT /api/items/{id}
-  await fetch(isNew ? '/api/items' : `/api/items/${editingId.value}`, {
-    // 어떤 동작인지 서버에 알려 줌
-    method: isNew ? 'POST' : 'PUT',
-    // 보내는 내용이 JSON이라고 알려 줌 (없으면 백엔드가 못 읽음)
-    headers: { 'Content-Type': 'application/json' },
-    // 입력한 폼 값(name, category, price)을 JSON 글자로 바꿔 보냄
-    body: JSON.stringify(form.value),
-  })
-
+   // editingId가 null이면 새 항목 → 등록, 아니면 그 id로 수정
+  if (editingId.value === null) {
+    await createItem(form.value)
+  } else {
+    await updateItem(editingId.value, form.value)
+  }
+    
   // 백엔드에서 최신 목록을 다시 받아와 화면 갱신
   await load()
   // 팝업 닫기
