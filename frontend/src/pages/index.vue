@@ -55,7 +55,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
 
 interface ServiceItem {
@@ -68,12 +68,21 @@ interface ServiceItem {
 const keyword = ref('')
 const categories = ['가전 청소', '청소', '이사', '수리']
 
-const items = ref<ServiceItem[]>([
-  { id: 1, name: '에어컨 청소', category: '가전 청소', price: 50000 },
-  { id: 2, name: '욕실 청소', category: '청소', price: 80000 },
-  { id: 3, name: '이사 청소', category: '청소', price: 90000 },
-])
-let nextId = 4
+// 서비스 목록을 담는 상자. 처음엔 빈 배열이고, 백엔드에서 받아와 채운다.
+// ref = 값이 바뀌면 화면이 자동으로 다시 그려지는 "반응형" 변수
+const items = ref<ServiceItem[]>([])
+
+// 백엔드에서 목록을 가져오는 함수
+// async = 안에서 서버 응답을 기다리는(await) 코드가 있다는 표시
+async function load () {
+  // GET /api/items 요청 → Vite 프록시가 8080 백엔드로 전달
+  const res = await fetch('/api/items')
+  // 응답 JSON 글자를 배열로 바꿔서 상자에 넣음 → 화면 자동 갱신
+  items.value = await res.json()
+}
+
+// 화면이 처음 뜰 때 load()를 한 번 실행
+onMounted(load)
 
 const filtered = computed(() =>
   items.value.filter(i => i.name.includes(keyword.value))
@@ -93,11 +102,17 @@ function askDelete(item: ServiceItem) {
   deleteDialog.value = true
 }
 
-function confirmDelete() {
+// 삭제 팝업에서 [삭제] 버튼을 눌렀을 때 실행
+// async = 서버 응답을 기다려야 해서 붙임
+async function confirmDelete () {
   if (deleteTarget.value) {
-    const id = deleteTarget.value.id
-    items.value = items.value.filter(i => i.id !== id)
+    // DELETE /api/items/{id} 요청 → 백엔드 delete() → store.remove(id)
+    // 백틱(`)과 ${ } = 문자열 안에 변수 값을 끼워 넣는 문법
+    await fetch(`/api/items/${deleteTarget.value.id}`, { method: 'DELETE' })
+    // 백엔드에서 최신 목록을 다시 받아와 화면 갱신
+    await load()
   }
+  // 팝업 닫기
   deleteDialog.value = false
 }
 
@@ -119,16 +134,29 @@ function openEdit(item: ServiceItem) {
   dialog.value = true
 }
 
-async function save() {
+// 팝업에서 [저장] 버튼을 눌렀을 때 실행 (등록과 수정을 함께 처리)
+async function save () {
+  // ?. = formRef가 비어 있으면(null) 멈추지 않고 그냥 undefined를 돌려줌
   const result = await formRef.value?.validate()
+  // 검사 결과가 없거나 통과 못 하면 저장하지 않고 멈춤
   if (!result?.valid) return
 
-  if (editingId.value === null) {
-    items.value.push({ id: nextId++, ...form.value })
-  } else {
-    const idx = items.value.findIndex(i => i.id === editingId.value)
-    items.value[idx] = { id: editingId.value, ...form.value }
-  }
+  // editingId가 null이면 새 항목 등록, 숫자면 그 항목 수정
+  const isNew = editingId.value === null
+
+  // 등록은 POST /api/items, 수정은 PUT /api/items/{id}
+  await fetch(isNew ? '/api/items' : `/api/items/${editingId.value}`, {
+    // 어떤 동작인지 서버에 알려 줌
+    method: isNew ? 'POST' : 'PUT',
+    // 보내는 내용이 JSON이라고 알려 줌 (없으면 백엔드가 못 읽음)
+    headers: { 'Content-Type': 'application/json' },
+    // 입력한 폼 값(name, category, price)을 JSON 글자로 바꿔 보냄
+    body: JSON.stringify(form.value),
+  })
+
+  // 백엔드에서 최신 목록을 다시 받아와 화면 갱신
+  await load()
+  // 팝업 닫기
   dialog.value = false
 }
 </script>
