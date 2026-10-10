@@ -1,0 +1,31 @@
+services:
+  # 서비스 이름. 이 이름으로 켜고 끔
+  postgres:
+    # 받을 상자 원본: PostgreSQL 17 공식 이미지
+    image: postgres:17
+    # docker ps에 보일 상자 이름
+    container_name: xiaolin-postgres
+    # WSL이나 Docker가 재시작되면 자동으로 다시 켜짐 (직접 끈 경우는 제외)
+    restart: unless-stopped
+    environment:
+      # ${ } = .env 파일의 값을 가져옴
+      POSTGRES_DB:        ${POSTGRES_DB}
+      POSTGRES_USER:      ${POSTGRES_USER}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD}
+      # DB 시간대를 한국 시간으로
+      TZ: Asia/Seoul
+    ports:
+      # 내 PC 5432번 → 상자 안 5432번. 백엔드와 DBeaver가 이 번호로 접속
+      - "5432:5432"
+    volumes:
+      # 내 PC 폴더 : 상자 안 DB 데이터 폴더 → DB 파일이 /engn002/data002/postgres에 저장됨
+      - /engn002/data002/postgres:/var/lib/postgresql/data
+    networks:
+      # 이 상자를 아래에서 선언한 xiaolin-net 네트워크에 연결
+      - xiaolin-net
+
+# 상자들이 서로 이름으로 찾을 수 있는 내부 네트워크
+networks:
+  xiaolin-net:
+    # 폴더 이름이 앞에 붙지 않고 이 이름 그대로 만들어짐
+    name: xiaolin-net      
