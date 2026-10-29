@@ -1,5 +1,14 @@
 <template>
-<v-app-bar title="서비스 항목" />
+<!-- 위쪽 바: 제목 + 오른쪽에 로그인/로그아웃 -->
+<v-app-bar title="서비스 항목">
+  <!-- 로그인한 상태: 이름 + 로그아웃 버튼 -->
+  <template v-if="loggedIn">
+    <span class="mr-2">{{ userName }}님</span>
+    <v-btn variant="outlined" class="mr-2" @click="logout">로그아웃</v-btn>
+  </template>
+  <!-- 로그인 안 한 상태: 로그인 버튼 -->
+  <v-btn v-else variant="flat" color="primary" class="mr-2" @click="login">로그인</v-btn>
+</v-app-bar>
 <v-container class="pa-4">
   <v-text-field v-model="keyword" label="검색" prepend-inner-icon="mdi-magnify" variant="outlined" />
   <v-card
@@ -61,6 +70,25 @@ import type { VForm } from 'vuetify/components'
 // ../ = 한 폴더 위로 (pages → src), 그다음 api/items
 import { fetchItems, createItem, updateItem, deleteItem, type ServiceItem } from '../api/items'
 
+// Keycloak 연결 (src/auth/keycloak.ts 에서 만든 것)
+import keycloak from '../auth/keycloak'
+
+// 지금 로그인했는지 (true/false)
+// 로그인/로그아웃 하면 페이지가 새로 열려서 그때마다 다시 계산돼요
+const loggedIn = keycloak.authenticated === true
+
+// 토큰 안의 사용자 정보에서 이름 꺼내기. 이름이 없으면 아이디(이메일)
+const userName = keycloak.tokenParsed?.name ?? keycloak.tokenParsed?.preferred_username
+
+// 로그인 버튼: Keycloak 로그인 화면으로 이동 (구글 버튼도 거기 있음)
+function login () {
+  keycloak.login()
+}
+
+// 로그아웃 버튼: Keycloak 세션 끝내고 우리 화면으로 돌아오기
+function logout () {
+  keycloak.logout({ redirectUri: 'http://localhost:3000' })
+}
 
 const keyword = ref('')
 const categories = ['가전 청소', '청소', '이사', '수리']
