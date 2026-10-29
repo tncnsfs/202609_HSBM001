@@ -1,3 +1,6 @@
+# 이 파일의 compose 프로젝트 이름 (keycloak 파일과 따로 관리되게)
+name: xiaolin-db
+
 services:
   # 서비스 이름. 이 이름으로 켜고 끔
   postgres:
@@ -28,4 +31,4 @@ services:
 networks:
   xiaolin-net:
     # 폴더 이름이 앞에 붙지 않고 이 이름 그대로 만들어짐
-    name: xiaolin-net      
+    name: xiaolin-net

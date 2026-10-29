@@ -1,0 +1,34 @@
+# Keycloak (로그인 서버). DB는 기존 xiaolin-postgres 를 같이 쓰고 DB만 keycloak 으로 분리
+# 이 파일의 compose 프로젝트 이름 (postgres 파일과 따로 관리되게)
+name: xiaolin-keycloak
+
+services:
+  keycloak:
+    # Keycloak 공식 이미지 (26 버전)
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: xiaolin-keycloak
+    # 개발 모드로 실행 (HTTPS 없이 http 로 동작, 연습용)
+    command: start-dev
+    restart: unless-stopped
+    environment:
+      # 어떤 DB를 쓰는지: postgres
+      KC_DB: postgres
+      # 같은 네트워크라 컨테이너 이름(xiaolin-postgres)으로 접속. DB 이름은 keycloak
+      KC_DB_URL: jdbc:postgresql://xiaolin-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      # 비밀번호는 .env 에서 읽음 (git 에 안 올라감)
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      # 처음 실행할 때 만들어지는 관리자 계정
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      # 내 PC 8081 → 컨테이너 8080 (8080 은 백엔드가 쓰고 있어서)
+      - "8081:8080"
+    networks:
+      - xiaolin-net
+
+networks:
+  xiaolin-net:
+    # 이미 postgres 쪽 파일에서 만든 네트워크를 "가져다 씀" (새로 만들지 않음)
+    external: true
